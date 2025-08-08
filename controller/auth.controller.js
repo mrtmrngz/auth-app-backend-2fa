@@ -66,21 +66,38 @@ export const verify_account = async (req, res, next) => {
     try {
         const payload = jwt.verify(token, process.env.JWT_MAIL_SECRET);
 
-        const user = await User.findOne({ _id: payload.id, otp });
+        const user = await User.findById(payload.id);
 
         if (!user) return next(new CustomError("Invalid OTP or user not found", 404));
 
+        if(user.isVerified) return res.status(200).json({message: "User already verified"})
+
         if (user.otpType !== "VERIFY_ACCOUNT") return next(new CustomError("Unauthorized OTP type", 403));
 
-        if (user.otpExpire < Date.now()) return next(new CustomError("OTP expired. Please register again.", 400));
+        if (user.otpExpire < new Date()) return next(new CustomError("OTP expired. Please resend code again.", 400));
 
-        user.isVerified = true;
-        user.otp = undefined;
-        user.otpType = undefined;
-        user.otpExpire = undefined;
-        await user.save();
+        if(otp.trim() === user.otp) {
+            user.isVerified = true;
+            user.otp = undefined;
+            user.otpType = undefined;
+            user.otpExpire = undefined;
+            user.verificationAttempts = undefined
+            await user.save();
 
-        res.status(200).json({ success: true, message: "Email verified, please login!" });
+            res.status(200).json({ success: true, message: "Email verified, please login!" });
+        }else {
+
+            const userVerificationAttemps = user.verificationAttempts || 0
+
+            if(userVerificationAttemps >= 4) {
+                await user.deleteOne()
+                return next(new CustomError("Too many failed attempts. Your account has been deleted. Please register again.", 403));
+            }else {
+                user.verificationAttempts = (userVerificationAttemps || 0) + 1
+                await user.save()
+                return next(new CustomError("Invalid Code", 400))
+            }
+        }
 
     } catch (err) {
         if (err.name === "TokenExpiredError") {
@@ -125,5 +142,32 @@ export const resend_otp = async (req, res, next) => {
     } catch (err) {
         console.error("Verify OTP Error:", err);
         return next(new CustomError("An error occurred during OTP verification.", 500));
+    }
+};
+
+export const login = async (req, res, next) => {
+
+    try {
+        //codes
+    } catch (err) {
+        return next(new CustomError("An error occurred during login.", 500));
+    }
+};
+
+export const get_token = async (req, res, next) => {
+
+    try {
+        //codes
+    } catch (err) {
+        return next(new CustomError("An error occurred during login.", 500));
+    }
+};
+
+export const logout = async (req, res, next) => {
+
+    try {
+        //codes
+    } catch (err) {
+        return next(new CustomError("An error occurred during login.", 500));
     }
 };

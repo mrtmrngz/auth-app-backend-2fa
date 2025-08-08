@@ -42,7 +42,8 @@ const UserSchema = mongoose.Schema({
     otp: {
         type: String,
     },
-    otpExpire: {type: Date}
+    otpExpire: {type: Date},
+    verificationAttempts: { type: Number }
 }, { timestamps: true })
 
 const User = mongoose.model('User', UserSchema)

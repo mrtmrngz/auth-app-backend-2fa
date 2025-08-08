@@ -7,11 +7,7 @@
     <list default="true" id="4d9b91af-cdfc-4f74-9d94-66938319d6ed" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controller/auth.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/controller/auth.controller.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/helpers/htmlTemplates.js" beforeDir="false" afterPath="$PROJECT_DIR$/helpers/htmlTemplates.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/libs/sendMail.js" beforeDir="false" afterPath="$PROJECT_DIR$/libs/sendMail.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/User.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/models/User.model.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pnpm-lock.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/routes/auth.route.js" beforeDir="false" afterPath="$PROJECT_DIR$/routes/auth.route.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -74,7 +70,8 @@
       <updated>1754660741577</updated>
       <workItem from="1754660743350" duration="8773000" />
       <workItem from="1754673818480" duration="3264000" />
-      <workItem from="1754686046527" duration="2211000" />
+      <workItem from="1754686046527" duration="2468000" />
+      <workItem from="1754695022511" duration="1580000" />
     </task>
     <servers />
   </component>
