@@ -3,7 +3,7 @@ import generateOTP from "../helpers/generateOTP.js";
 import {sendOTPMAIL} from "../libs/sendMail.js";
 import User from "../models/User.model.js";
 import bcrypt from 'bcrypt'
-import {generateMailToken} from "../libs/generateTokens.js";
+import {generateAccessToken, generateMailToken} from "../libs/generateTokens.js";
 import jwt from "jsonwebtoken";
 
 export const register_controller = async (req, res, next) => {
@@ -56,8 +56,8 @@ export const register_controller = async (req, res, next) => {
     }
 }
 
-export const verify_account = async (req, res, next) => {
-    const { token, otp } = req.body;
+export const verify_otp = async (req, res, next) => {
+    const { token, otp, otpType: bodyOtpType } = req.body;
 
     if (!token || !otp) {
         return next(new CustomError("OTP and Token are required", 400));
@@ -70,30 +70,47 @@ export const verify_account = async (req, res, next) => {
 
         if (!user) return next(new CustomError("Invalid OTP or user not found", 404));
 
-        if(user.isVerified) return res.status(200).json({message: "User already verified"})
+        if(bodyOtpType === "VERIFY_ACCOUNT" && user.isVerified) return res.status(200).json({message: "User already verified"})
 
-        if (user.otpType !== "VERIFY_ACCOUNT") return next(new CustomError("Unauthorized OTP type", 403));
+        if (user.otpType !== bodyOtpType) return next(new CustomError("Unauthorized OTP type", 403));
 
         if (user.otpExpire < new Date()) return next(new CustomError("OTP expired. Please resend code again.", 400));
 
         if(otp.trim() === user.otp) {
-            user.isVerified = true;
+
+            if(bodyOtpType === "VERIFY_ACCOUNT") {
+                user.isVerified = true;
+            }
             user.otp = undefined;
             user.otpType = undefined;
             user.otpExpire = undefined;
-            user.verificationAttempts = undefined
+            user.otpAttemps = undefined
             await user.save();
 
-            res.status(200).json({ success: true, message: "Email verified, please login!" });
+            if(bodyOtpType === "VERIFY_ACCOUNT") {
+                return  res.status(200).json({ success: true, message: "Email verified, please login!" });
+            }else if(bodyOtpType === "TWO_FACTOR") {
+                // const accessToken = generateAccessToken(user._id, user.role)
+                const accessToken = "token"   //generate access and refresh token  (save refresh token http only cookie!)
+                return  res.status(200).json({ success: true, message: "Login Successfull", accessToken });
+            }
+
         }else {
 
-            const userVerificationAttemps = user.verificationAttempts || 0
+            const userOtpAttemps = user.otpAttemps || 0
 
-            if(userVerificationAttemps >= 4) {
-                await user.deleteOne()
-                return next(new CustomError("Too many failed attempts. Your account has been deleted. Please register again.", 403));
+            if(userOtpAttemps >= 4) {
+                if(bodyOtpType === "VERIFY_ACCOUNT") {
+                    await user.deleteOne()
+                    return next(new CustomError("Too many failed attempts. Your account has been deleted. Please register again.", 403));
+                }else if(bodyOtpType === "TWO_FACTOR") {
+                    user.isUserLocked = true
+                    user.userLockExpire = new Date(Date.now() + (1000 * 60 * 10))
+                    await user.save()
+                    return next(new CustomError("Too many failed attempts. Your account has been locked. Please register again.", 429));
+                }
             }else {
-                user.verificationAttempts = (userVerificationAttemps || 0) + 1
+                user.otpAttemps = (userOtpAttemps || 0) + 1
                 await user.save()
                 return next(new CustomError("Invalid Code", 400))
             }
@@ -110,32 +127,54 @@ export const verify_account = async (req, res, next) => {
 };
 
 export const resend_otp = async (req, res, next) => {
-    const { token } = req.body;
+    const { token, otpType } = req.body;
 
     if (!token) {
         return next(new CustomError("OTP and Token are required", 400));
     }
 
+    if(!otpType)  return next(new CustomError("OTP type is required", 400));
+
     try {
 
-        const decodedToken = jwt.decode(token, process.env.JWT_MAIL_SECRET)
+        const decodedToken = jwt.verify(token, process.env.JWT_MAIL_SECRET, { ignoreExpiration: true })
 
         if (!decodedToken || !decodedToken.id) {
             return next(new CustomError("Invalid or corrupted token.", 401));
         }
 
+        if(decodedToken.otpType !== otpType) return next(new CustomError("Invalid OTP type", 403))
+
         const user = await User.findById(decodedToken.id)
 
         if(!user) return next(new CustomError("User not found", 404))
 
+        if(decodedToken.otpType === "TWO_FACTOR" && user.isUserLocked) {
+            if(new Date() > user.userLockExpire){
+                user.isUserLocked = undefined
+                user.userLockExpire = undefined
+                user.otpAttemps = undefined
+                await user.save()
+            }else {
+                const unlockDate = user.userLockExpire;
+                const unlockTime = unlockDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                return next(new CustomError(
+                    `Your account is locked please try ${unlockTime}`,
+                    403
+                ))
+            }
+        }
+
         const newOtp = generateOTP()
-        const newToken = generateMailToken("VERIFY_ACCOUNT",user._id)
+        const newToken = generateMailToken(otpType ,user._id)
 
         user.otp = newOtp
         user.otpExpire = new Date(Date.now() + (1000 * 60 * 5))
-        await user.save()
 
-        await sendOTPMAIL({otp: newOtp, email:user.email})
+        await Promise.all([
+            user.save(),
+            sendOTPMAIL({otp: newOtp, email:user.email})
+        ])
 
         return res.status(200).json({success: true, message: "The code has been sent to your email address", token: newToken})
 
@@ -146,6 +185,8 @@ export const resend_otp = async (req, res, next) => {
 };
 
 export const login = async (req, res, next) => {
+
+    const { email, password } = req.body
 
     try {
         //codes
