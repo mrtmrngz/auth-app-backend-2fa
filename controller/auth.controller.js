@@ -2,9 +2,10 @@ import CustomError from "../helpers/customError.js";
 import generateOTP from "../helpers/generateOTP.js";
 import {sendOTPMAIL} from "../libs/sendMail.js";
 import User from "../models/User.model.js";
-import bcrypt from 'bcrypt'
-import {generateAccessToken, generateMailToken} from "../libs/generateTokens.js";
+import {generateAccessToken, generateMailToken, generateRefreshToken} from "../libs/generateTokens.js";
 import jwt from "jsonwebtoken";
+import bcrypt from 'bcrypt'
+import {send_two_factor_mail} from "../helpers/two-factor-mail.js";
 
 export const register_controller = async (req, res, next) => {
 
@@ -40,6 +41,7 @@ export const register_controller = async (req, res, next) => {
             username,
             password: hashedPassword,
             otp: verifyAccountOTP,
+            otpType: "VERIFY_ACCOUNT",
             otpExpire: new Date(Date.now() + (1000 * 60 * 5))
         })
 
@@ -78,21 +80,34 @@ export const verify_otp = async (req, res, next) => {
 
         if(otp.trim() === user.otp) {
 
-            if(bodyOtpType === "VERIFY_ACCOUNT") {
-                user.isVerified = true;
-            }
             user.otp = undefined;
             user.otpType = undefined;
             user.otpExpire = undefined;
             user.otpAttemps = undefined
-            await user.save();
 
             if(bodyOtpType === "VERIFY_ACCOUNT") {
+                user.isVerified = true;
+                await user.save()
                 return  res.status(200).json({ success: true, message: "Email verified, please login!" });
             }else if(bodyOtpType === "TWO_FACTOR") {
-                // const accessToken = generateAccessToken(user._id, user.role)
-                const accessToken = "token"   //generate access and refresh token  (save refresh token http only cookie!)
-                return  res.status(200).json({ success: true, message: "Login Successfull", accessToken });
+
+                if(!user.isTwoFactorEnabled) {
+                    user.isTwoFactorEnabled = true
+                    await user.save()
+                    return res.status(200).json({success: true, message: "2FA activated"})
+                }
+
+                const accessToken = generateAccessToken(user._id, user.role)
+                const refreshToken = generateRefreshToken(user._id, user.role)
+
+                await user.save()
+
+                res.cookie('_session', refreshToken, {
+                    httpOnly: true,
+                    secure: process.NODE_ENV === "production",
+                    sameSite: process.NODE_ENV === "production" ? "None" : "lax",
+                    maxAge: 1000 * 60 * 60 * 24 * 7
+                }).status(200).json({success: true, message: "Login Successful", accessToken})
             }
 
         }else {
@@ -107,7 +122,7 @@ export const verify_otp = async (req, res, next) => {
                     user.isUserLocked = true
                     user.userLockExpire = new Date(Date.now() + (1000 * 60 * 10))
                     await user.save()
-                    return next(new CustomError("Too many failed attempts. Your account has been locked. Please register again.", 429));
+                    return next(new CustomError("Too many failed attempts. Your account has been locked. Please try again later", 429));
                 }
             }else {
                 user.otpAttemps = (userOtpAttemps || 0) + 1
@@ -188,8 +203,34 @@ export const login = async (req, res, next) => {
 
     const { email, password } = req.body
 
+    if(!email || !password) return next(new CustomError("Email and Password are required!", 400))
+
     try {
-        //codes
+        const user = await User.findOne({ email }).select('+password')
+
+        if(!user) return next(new CustomError("Invalid credentials!", 401))
+
+        const isPasswordTrue = await bcrypt.compare(password, user.password)
+
+        if(!isPasswordTrue) return next(new CustomError("Invalid credentials!", 401))
+
+        if(user.isTwoFactorEnabled) {
+
+            const { token, message } = await send_two_factor_mail(user)
+
+            return res.status(200).json({success: true, message, token})
+        }else {
+            const accessToken = generateAccessToken(user._id, user.role)
+            const refreshToken = generateRefreshToken(user._id, user.role)
+
+            res.cookie('_session', refreshToken, {
+                httpOnly: true,
+                secure: process.NODE_ENV === "production",
+                sameSite: process.NODE_ENV === "production" ? "None" : "lax",
+                maxAge: 1000 * 60 * 60 * 24 * 7
+            }).status(200).json({success: true, message: "Login Successful", accessToken})
+        }
+
     } catch (err) {
         return next(new CustomError("An error occurred during login.", 500));
     }

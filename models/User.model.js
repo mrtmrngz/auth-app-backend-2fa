@@ -36,8 +36,7 @@ const UserSchema = mongoose.Schema({
     resetPasswordTokenExpire: { type: Date },
     otpType: {
         type:String,
-        enum: ["VERIFY_ACCOUNT", "TWO_FACTOR"],
-        default: "VERIFY_ACCOUNT"
+        enum: ["VERIFY_ACCOUNT", "TWO_FACTOR"]
     },
     otp: {
         type: String,
