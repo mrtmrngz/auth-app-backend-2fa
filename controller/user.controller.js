@@ -1,6 +1,10 @@
 import CustomError from "../helpers/customError.js";
 import User from "../models/User.model.js";
 import {send_two_factor_mail} from "../helpers/two-factor-mail.js";
+import {generateMailToken} from "../libs/generateTokens.js";
+import generateOTP from "../helpers/generateOTP.js";
+import {sendOTPMAIL} from "../libs/sendMail.js";
+import {cloudinary} from "../libs/cloudinary.js";
 
 
 export const user_info = async (req, res, next) => {
@@ -38,5 +42,98 @@ export const enable_two_factor = async (req, res, next) => {
 
     }catch (err) {
         return next(new CustomError("An error occurred during enabled 2FA.", 500));
+    }
+}
+
+export const change_mail_or_username = async (req, res, next) => {
+
+    const {username, email, changeType} = req.body
+    const tokenUserId = req.user.id
+
+    if(!changeType) {
+        return next(new CustomError("Change type is required", 400))
+    }
+
+    if(changeType !== "EMAIL_CHANGE" && changeType !== "USERNAME_CHANGE") return next(new CustomError("Invalid Change Type", 400))
+
+    if(changeType === "EMAIL_CHANGE" && (!email || email.trim() === "")) return next(new CustomError("Email Required", 400))
+    if(changeType === "USERNAME_CHANGE" && (!username || username.trim() === "")) return next(new CustomError("Username Required", 400))
+
+    try {
+
+        const user = await User.findById(tokenUserId)
+
+        if(!user) return next(new CustomError("User not found", 404))
+        let token;
+
+        if(changeType === "EMAIL_CHANGE") {
+            const existingUserEmail = await User.findOne({email: email})
+
+            if(existingUserEmail) return next(new CustomError("Existing user!", 400))
+
+            user.newEmail = email
+
+        }else if (changeType === "USERNAME_CHANGE") {
+            const existingUserUsername = await User.findOne({username: username})
+
+            if(existingUserUsername) return next(new CustomError("Existing user!", 400))
+
+            user.newUsername = username
+        }
+
+        const otp = generateOTP()
+        user.otp = otp
+        user.otpType = changeType
+        user.otpExpire = new Date(Date.now() + (1000 * 60 * 5))
+        await user.save()
+
+        const mailType = changeType === "EMAIL_CHANGE" ? "Email Change" : "Username Change"
+
+        await sendOTPMAIL({otp, email: user.email, type: mailType})
+
+        token = generateMailToken(changeType, user._id)
+
+        return res.status(200).json({success: true, message: "The 6-digit code has been sent to your email address.", token})
+
+
+    }catch (err) {
+        return next(new CustomError("An error occurred during profile info change.", 500));
+    }
+}
+
+export const change_other_infos = async (req, res, next) => {
+
+
+    const tokenUserId = req.user.id
+    const uploadedFile = req.file
+
+    try {
+
+        const user = await User.findById(tokenUserId)
+
+        if(!user) return next(new CustomError("User not found", 404))
+
+        if(uploadedFile) {
+
+            if(user.avatar && user.avatar.public_id) {
+                await cloudinary.uploader.destroy(user.avatar.public_id)
+            }
+
+            const result = await cloudinary.uploader.upload(`data:${uploadedFile.mimetype};base64,${uploadedFile.buffer.toString('base64')}`, {
+                folder: "auth-app"
+            })
+
+            user.avatar.url = result.url
+            user.avatar.public_id = result.public_id
+        }
+
+        await user.save()
+
+        res.status(200).json({message: "User updated successfully!", success: true})
+
+
+    }catch (err) {
+        console.log(err)
+        return next(new CustomError("An error occurred during profile info change.", 500));
     }
 }

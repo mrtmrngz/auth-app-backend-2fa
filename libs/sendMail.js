@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import {OTP_TEMPLATE} from "../helpers/htmlTemplates.js";
+import {OTP_TEMPLATE, RESET_PASSWORD_MAIL} from "../helpers/htmlTemplates.js";
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -27,5 +27,17 @@ export const sendOTPMAIL = async ({ otp, email, type = "Email Verification" }) =
         to: email,
         subject: type,
         html: OTP_TEMPLATE.replace("{{email content}}", type).replace("{{ otp_code }}", otp)
+    })
+}
+
+export const send_reset_password_mail = async ({email, token}) => {
+    await sendMail({
+        from: {
+            name: "Nodejs Auth App",
+            address: process.env.APP_MAIL
+        },
+        to: email,
+        subject: "Reset Password",
+        html: RESET_PASSWORD_MAIL.replace("{{ reset_password_link }}", `${process.env.CLIENT_URL}?token=${token}`)
     })
 }

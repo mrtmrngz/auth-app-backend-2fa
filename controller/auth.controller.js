@@ -1,6 +1,6 @@
 import CustomError from "../helpers/customError.js";
 import generateOTP from "../helpers/generateOTP.js";
-import {sendOTPMAIL} from "../libs/sendMail.js";
+import {send_reset_password_mail, sendOTPMAIL} from "../libs/sendMail.js";
 import User from "../models/User.model.js";
 import {generateAccessToken, generateMailToken, generateRefreshToken} from "../libs/generateTokens.js";
 import jwt from "jsonwebtoken";
@@ -108,6 +108,23 @@ export const verify_otp = async (req, res, next) => {
                     sameSite: process.NODE_ENV === "production" ? "None" : "lax",
                     maxAge: 1000 * 60 * 60 * 24 * 7
                 }).status(200).json({success: true, message: "Login Successful", accessToken})
+            }else if(bodyOtpType === "EMAIL_CHANGE" || bodyOtpType === "USERNAME_CHANGE") {
+
+                if(bodyOtpType === "EMAIL_CHANGE") {
+                    user.email = user.newEmail
+                    user.newEmail = undefined
+                }
+
+                if(bodyOtpType === "USERNAME_CHANGE") {
+                    user.username = user.newUsername
+                    user.newUsername = undefined
+                }
+
+                await user.save()
+
+                const message = bodyOtpType === "EMAIL_CHANGE" ? "User Email Address changed successfully" : "User username changed successfully"
+
+                return res.status(200).json({success: true, message})
             }
 
         }else {
@@ -118,11 +135,16 @@ export const verify_otp = async (req, res, next) => {
                 if(bodyOtpType === "VERIFY_ACCOUNT") {
                     await user.deleteOne()
                     return next(new CustomError("Too many failed attempts. Your account has been deleted. Please register again.", 403));
-                }else if(bodyOtpType === "TWO_FACTOR") {
+                }else if(bodyOtpType === "TWO_FACTOR" || bodyOtpType === "EMAIL_CHANGE" || bodyOtpType === "USERNAME_CHANGE") {
                     user.isUserLocked = true
                     user.userLockExpire = new Date(Date.now() + (1000 * 60 * 10))
                     await user.save()
-                    return next(new CustomError("Too many failed attempts. Your account has been locked. Please try again later", 429));
+                    const lockMessage = bodyOtpType === "TWO_FACTOR"
+                        ? "Too many failed attempts. Your account has been locked. Please try again later"
+                        : bodyOtpType === "EMAIL_CHANGE"
+                            ? "Too many failed attempts. Your email change request has been locked. Please try again in 10 minutes."
+                            : "Too many failed attempts. Your username change request has been locked. Please try again in 10 minutes."
+                    return next(new CustomError(lockMessage, 429));
                 }
             }else {
                 user.otpAttemps = (userOtpAttemps || 0) + 1
@@ -199,6 +221,71 @@ export const resend_otp = async (req, res, next) => {
     }
 };
 
+export const sent_reset_password_email_controller = async (req, res, next) => {
+
+    const { email } = req.body
+
+    if(!email) return next(new CustomError("Email is required", 400))
+
+    try {
+        const user = await User.findOne({email}).select("email")
+
+        if(!user) return res.status(200).json({message: "Password reset email has been sent to your address if it exists.", success: true});
+
+        const reset_password_token = generateMailToken("RESET_PASSWORD", user._id)
+
+        user.resetPasswordToken = reset_password_token
+        user.resetPasswordTokenExpire = new Date(Date.now() + (1000 * 60 * 5))
+
+        await user.save()
+
+        await send_reset_password_mail({email: user.email, token: reset_password_token})
+
+        res.status(200).json({message: "Password reset email has been sent to your address.", success: true})
+    } catch (err) {
+        return next(new CustomError("An error occurred during login.", 500));
+    }
+};
+
+export const apply_password = async (req, res, next) => {
+
+    const { token, password } = req.body
+
+    if(!token || !password) return next(new CustomError("Token and Password fields are required!", 400))
+
+    try {
+
+        const payload = jwt.verify(token, process.env.JWT_MAIL_SECRET)
+
+        if(payload.otpType !== "RESET_PASSWORD") return next(new CustomError("Invalid Token Type", 400))
+
+        const user = await User.findOne({_id: payload.id, resetPasswordToken: token}).select("+password resetPasswordTokenExpire")
+
+        if(!user) {
+            return next(new CustomError("User not found", 404))
+        }
+
+        if(user.resetPasswordTokenExpire < new Date()) return next(new CustomError("Token already expire please send reset password mail again!", 401))
+
+        const oldPasswordCompare = await bcrypt.compare(password, user.password)
+
+        if(oldPasswordCompare) return next(new CustomError("Your new password cannot be the same as your old password.", 400))
+
+        user.password = await bcrypt.hash(password, 10)
+        user.resetPasswordTokenExpire = undefined
+        user.resetPasswordToken = undefined
+        await user.save()
+
+        res.status(200).json({success: true, message: "Password change successfully!"})
+
+    } catch (err) {
+        if (err.name === "TokenExpiredError") {
+            return next(new CustomError("Invalid or expired token.", 401));
+        }
+        return next(new CustomError("An error occurred during login.", 500));
+    }
+};
+
 export const login = async (req, res, next) => {
 
     const { email, password } = req.body
@@ -238,8 +325,19 @@ export const login = async (req, res, next) => {
 
 export const get_token = async (req, res, next) => {
 
+    const token = req.cookies['_session']
+
+    if(!token) return  res.status(204).end()
     try {
-        //codes
+        jwt.verify(token, process.env.JWT_REFRESH_SECRET, (err, payload) => {
+            if(err) {
+                return next(new CustomError("Invalid Token", 403))
+            }
+
+            const newAccessToken = generateAccessToken(payload.id, payload.role)
+
+            return res.status(200).json({success: true, accessToken: newAccessToken})
+        })
     } catch (err) {
         return next(new CustomError("An error occurred during login.", 500));
     }
@@ -247,8 +345,16 @@ export const get_token = async (req, res, next) => {
 
 export const logout = async (req, res, next) => {
 
+    const isAuthenticated = req.isAuthenticated
+
+    if(!isAuthenticated) return next(new CustomError("No logged in user"))
+
     try {
-        //codes
+        res.clearCookie('_session', {
+            httpOnly: true,
+            secure: process.NODE_ENV === "production",
+            sameSite: process.NODE_ENV === "production" ? "None" : "lax",
+        }).status(200).json({success: true, message: "Logout Successful."})
     } catch (err) {
         return next(new CustomError("An error occurred during login.", 500));
     }

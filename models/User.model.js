@@ -7,9 +7,19 @@ const UserSchema = mongoose.Schema({
         unique: true,
         trim: true
     },
+    newUsername: {
+        type: String,
+        unique: true,
+        trim: true
+    },
     email: {
         type: String,
         required: true,
+        unique: true,
+        trim: true
+    },
+    newEmail: {
+        type: String,
         unique: true,
         trim: true
     },
@@ -19,8 +29,12 @@ const UserSchema = mongoose.Schema({
         select: false
     },
     avatar: {
-        type: String,
-        default: "https://res.cloudinary.com/mertmarangoz/image/upload/v1754666049/d8b5d0a738295345ebd8934b859fa1fca1c8c6ad_qtxbzf.jpg"
+        url: {
+            type: String,
+        },
+        public_id: {
+            type: String,
+        }
     },
     role: {
         type: String,
@@ -36,7 +50,7 @@ const UserSchema = mongoose.Schema({
     resetPasswordTokenExpire: { type: Date },
     otpType: {
         type:String,
-        enum: ["VERIFY_ACCOUNT", "TWO_FACTOR"]
+        enum: ["VERIFY_ACCOUNT", "TWO_FACTOR", "USERNAME_CHANGE", "EMAIL_CHANGE"]
     },
     otp: {
         type: String,
