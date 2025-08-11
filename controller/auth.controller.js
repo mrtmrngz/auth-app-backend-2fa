@@ -243,7 +243,7 @@ export const sent_reset_password_email_controller = async (req, res, next) => {
 
         res.status(200).json({message: "Password reset email has been sent to your address.", success: true})
     } catch (err) {
-        return next(new CustomError("An error occurred during login.", 500));
+        return next(new CustomError("An error occurred during sending reset password mail.", 500));
     }
 };
 
@@ -282,7 +282,7 @@ export const apply_password = async (req, res, next) => {
         if (err.name === "TokenExpiredError") {
             return next(new CustomError("Invalid or expired token.", 401));
         }
-        return next(new CustomError("An error occurred during login.", 500));
+        return next(new CustomError("An error occurred during reset password.", 500));
     }
 };
 
@@ -293,7 +293,7 @@ export const login = async (req, res, next) => {
     if(!email || !password) return next(new CustomError("Email and Password are required!", 400))
 
     try {
-        const user = await User.findOne({ email }).select('+password')
+        const user = await User.findOne({ email, isBanned: false }).select('+password')
 
         if(!user) return next(new CustomError("Invalid credentials!", 401))
 
@@ -347,7 +347,7 @@ export const logout = async (req, res, next) => {
 
     const isAuthenticated = req.isAuthenticated
 
-    if(!isAuthenticated) return next(new CustomError("No logged in user"))
+    if(!isAuthenticated) return next(new CustomError("No logged in user", 401))
 
     try {
         res.clearCookie('_session', {

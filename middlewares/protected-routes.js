@@ -10,7 +10,7 @@ export function protected_routes(roles) {
             return next(new CustomError("Unauthorized", 401))
         }
 
-        if(user.role === "admin") {
+        if(user.role === "ADMIN") {
             return  next()
         }
 
