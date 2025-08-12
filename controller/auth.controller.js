@@ -59,7 +59,7 @@ export const register_controller = async (req, res, next) => {
 }
 
 export const verify_otp = async (req, res, next) => {
-    const { token, otp, otpType: bodyOtpType } = req.body;
+    const {token, otp, otpType: bodyOtpType} = req.body;
 
     if (!token || !otp) {
         return next(new CustomError("OTP and Token are required", 400));
@@ -72,26 +72,26 @@ export const verify_otp = async (req, res, next) => {
 
         if (!user) return next(new CustomError("Invalid OTP or user not found", 404));
 
-        if(bodyOtpType === "VERIFY_ACCOUNT" && user.isVerified) return res.status(200).json({message: "User already verified"})
+        if (bodyOtpType === "VERIFY_ACCOUNT" && user.isVerified) return res.status(200).json({message: "User already verified"})
 
         if (user.otpType !== bodyOtpType) return next(new CustomError("Unauthorized OTP type", 403));
 
         if (user.otpExpire < new Date()) return next(new CustomError("OTP expired. Please resend code again.", 400));
 
-        if(otp.trim() === user.otp) {
+        if (otp.trim() === user.otp) {
 
             user.otp = undefined;
             user.otpType = undefined;
             user.otpExpire = undefined;
             user.otpAttemps = undefined
 
-            if(bodyOtpType === "VERIFY_ACCOUNT") {
+            if (bodyOtpType === "VERIFY_ACCOUNT") {
                 user.isVerified = true;
                 await user.save()
-                return  res.status(200).json({ success: true, message: "Email verified, please login!" });
-            }else if(bodyOtpType === "TWO_FACTOR") {
+                return res.status(200).json({success: true, message: "Email verified, please login!"});
+            } else if (bodyOtpType === "TWO_FACTOR") {
 
-                if(!user.isTwoFactorEnabled) {
+                if (!user.isTwoFactorEnabled) {
                     user.isTwoFactorEnabled = true
                     await user.save()
                     return res.status(200).json({success: true, message: "2FA activated"})
@@ -108,14 +108,14 @@ export const verify_otp = async (req, res, next) => {
                     sameSite: process.NODE_ENV === "production" ? "None" : "lax",
                     maxAge: 1000 * 60 * 60 * 24 * 7
                 }).status(200).json({success: true, message: "Login Successful", accessToken})
-            }else if(bodyOtpType === "EMAIL_CHANGE" || bodyOtpType === "USERNAME_CHANGE") {
+            } else if (bodyOtpType === "EMAIL_CHANGE" || bodyOtpType === "USERNAME_CHANGE") {
 
-                if(bodyOtpType === "EMAIL_CHANGE") {
+                if (bodyOtpType === "EMAIL_CHANGE") {
                     user.email = user.newEmail
                     user.newEmail = undefined
                 }
 
-                if(bodyOtpType === "USERNAME_CHANGE") {
+                if (bodyOtpType === "USERNAME_CHANGE") {
                     user.username = user.newUsername
                     user.newUsername = undefined
                 }
@@ -127,15 +127,15 @@ export const verify_otp = async (req, res, next) => {
                 return res.status(200).json({success: true, message})
             }
 
-        }else {
+        } else {
 
             const userOtpAttemps = user.otpAttemps || 0
 
-            if(userOtpAttemps >= 4) {
-                if(bodyOtpType === "VERIFY_ACCOUNT") {
+            if (userOtpAttemps >= 4) {
+                if (bodyOtpType === "VERIFY_ACCOUNT") {
                     await user.deleteOne()
                     return next(new CustomError("Too many failed attempts. Your account has been deleted. Please register again.", 403));
-                }else if(bodyOtpType === "TWO_FACTOR" || bodyOtpType === "EMAIL_CHANGE" || bodyOtpType === "USERNAME_CHANGE") {
+                } else if (bodyOtpType === "TWO_FACTOR" || bodyOtpType === "EMAIL_CHANGE" || bodyOtpType === "USERNAME_CHANGE") {
                     user.isUserLocked = true
                     user.userLockExpire = new Date(Date.now() + (1000 * 60 * 10))
                     await user.save()
@@ -146,7 +146,7 @@ export const verify_otp = async (req, res, next) => {
                             : "Too many failed attempts. Your username change request has been locked. Please try again in 10 minutes."
                     return next(new CustomError(lockMessage, 429));
                 }
-            }else {
+            } else {
                 user.otpAttemps = (userOtpAttemps || 0) + 1
                 await user.save()
                 return next(new CustomError("Invalid Code", 400))
@@ -164,37 +164,41 @@ export const verify_otp = async (req, res, next) => {
 };
 
 export const resend_otp = async (req, res, next) => {
-    const { token, otpType } = req.body;
+    const {token, otpType} = req.body;
 
     if (!token) {
         return next(new CustomError("OTP and Token are required", 400));
     }
 
-    if(!otpType)  return next(new CustomError("OTP type is required", 400));
+    if (!otpType) return next(new CustomError("OTP type is required", 400));
 
     try {
 
-        const decodedToken = jwt.verify(token, process.env.JWT_MAIL_SECRET, { ignoreExpiration: true })
+        const decodedToken = jwt.verify(token, process.env.JWT_MAIL_SECRET, {ignoreExpiration: true})
 
         if (!decodedToken || !decodedToken.id) {
             return next(new CustomError("Invalid or corrupted token.", 401));
         }
 
-        if(decodedToken.otpType !== otpType) return next(new CustomError("Invalid OTP type", 403))
+        if (decodedToken.otpType !== otpType) return next(new CustomError("Invalid OTP type", 403))
 
         const user = await User.findById(decodedToken.id)
 
-        if(!user) return next(new CustomError("User not found", 404))
+        if (!user) return next(new CustomError("User not found", 404))
 
-        if(decodedToken.otpType === "TWO_FACTOR" && user.isUserLocked) {
-            if(new Date() > user.userLockExpire){
+        if (decodedToken.otpType === "TWO_FACTOR" && user.isUserLocked) {
+            if (new Date() > user.userLockExpire) {
                 user.isUserLocked = undefined
                 user.userLockExpire = undefined
                 user.otpAttemps = undefined
                 await user.save()
-            }else {
+            } else {
                 const unlockDate = user.userLockExpire;
-                const unlockTime = unlockDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const unlockTime = unlockDate.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
                 return next(new CustomError(
                     `Your account is locked please try ${unlockTime}`,
                     403
@@ -203,17 +207,21 @@ export const resend_otp = async (req, res, next) => {
         }
 
         const newOtp = generateOTP()
-        const newToken = generateMailToken(otpType ,user._id)
+        const newToken = generateMailToken(otpType, user._id)
 
         user.otp = newOtp
         user.otpExpire = new Date(Date.now() + (1000 * 60 * 5))
 
         await Promise.all([
             user.save(),
-            sendOTPMAIL({otp: newOtp, email:user.email})
+            sendOTPMAIL({otp: newOtp, email: user.email})
         ])
 
-        return res.status(200).json({success: true, message: "The code has been sent to your email address", token: newToken})
+        return res.status(200).json({
+            success: true,
+            message: "The code has been sent to your email address",
+            token: newToken
+        })
 
     } catch (err) {
         console.error("Verify OTP Error:", err);
@@ -223,14 +231,17 @@ export const resend_otp = async (req, res, next) => {
 
 export const sent_reset_password_email_controller = async (req, res, next) => {
 
-    const { email } = req.body
+    const {email} = req.body
 
-    if(!email) return next(new CustomError("Email is required", 400))
+    if (!email) return next(new CustomError("Email is required", 400))
 
     try {
         const user = await User.findOne({email}).select("email")
 
-        if(!user) return res.status(200).json({message: "Password reset email has been sent to your address if it exists.", success: true});
+        if (!user) return res.status(200).json({
+            message: "Password reset email has been sent to your address if it exists.",
+            success: true
+        });
 
         const reset_password_token = generateMailToken("RESET_PASSWORD", user._id)
 
@@ -249,27 +260,30 @@ export const sent_reset_password_email_controller = async (req, res, next) => {
 
 export const apply_password = async (req, res, next) => {
 
-    const { token, password } = req.body
+    const {token, password} = req.body
 
-    if(!token || !password) return next(new CustomError("Token and Password fields are required!", 400))
+    if (!token || !password) return next(new CustomError("Token and Password fields are required!", 400))
 
     try {
 
         const payload = jwt.verify(token, process.env.JWT_MAIL_SECRET)
 
-        if(payload.otpType !== "RESET_PASSWORD") return next(new CustomError("Invalid Token Type", 400))
+        if (payload.otpType !== "RESET_PASSWORD") return next(new CustomError("Invalid Token Type", 400))
 
-        const user = await User.findOne({_id: payload.id, resetPasswordToken: token}).select("+password resetPasswordTokenExpire")
+        const user = await User.findOne({
+            _id: payload.id,
+            resetPasswordToken: token
+        }).select("+password resetPasswordTokenExpire")
 
-        if(!user) {
+        if (!user) {
             return next(new CustomError("User not found", 404))
         }
 
-        if(user.resetPasswordTokenExpire < new Date()) return next(new CustomError("Token already expire please send reset password mail again!", 401))
+        if (user.resetPasswordTokenExpire < new Date()) return next(new CustomError("Token already expire please send reset password mail again!", 401))
 
         const oldPasswordCompare = await bcrypt.compare(password, user.password)
 
-        if(oldPasswordCompare) return next(new CustomError("Your new password cannot be the same as your old password.", 400))
+        if (oldPasswordCompare) return next(new CustomError("Your new password cannot be the same as your old password.", 400))
 
         user.password = await bcrypt.hash(password, 10)
         user.resetPasswordTokenExpire = undefined
@@ -288,25 +302,38 @@ export const apply_password = async (req, res, next) => {
 
 export const login = async (req, res, next) => {
 
-    const { email, password } = req.body
+    const {email, password} = req.body
 
-    if(!email || !password) return next(new CustomError("Email and Password are required!", 400))
+    if (!email || !password) return next(new CustomError("Email and Password are required!", 400))
 
     try {
-        const user = await User.findOne({ email, isBanned: false }).select('+password')
+        const user = await User.findOne({email}).select('+password')
 
-        if(!user) return next(new CustomError("Invalid credentials!", 401))
+        if (!user) return next(new CustomError("Invalid credentials!", 401))
+
+        if (user.ban_status.is_banned) {
+            if (user.ban_status.ban_expire) {
+                const ban_expire = user.ban_status.ban_expire.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                return next(new CustomError(`You are currently banned. Your ban will be unbanned when ${ban_expire}`, 403))
+            } else {
+                return next(new CustomError("You are banned!", 403))
+            }
+        }
 
         const isPasswordTrue = await bcrypt.compare(password, user.password)
 
-        if(!isPasswordTrue) return next(new CustomError("Invalid credentials!", 401))
+        if (!isPasswordTrue) return next(new CustomError("Invalid credentials!", 401))
 
-        if(user.isTwoFactorEnabled) {
+        if (user.isTwoFactorEnabled) {
 
-            const { token, message } = await send_two_factor_mail(user)
+            const {token, message} = await send_two_factor_mail(user)
 
             return res.status(200).json({success: true, message, token})
-        }else {
+        } else {
             const accessToken = generateAccessToken(user._id, user.role)
             const refreshToken = generateRefreshToken(user._id, user.role)
 
@@ -327,10 +354,10 @@ export const get_token = async (req, res, next) => {
 
     const token = req.cookies['_session']
 
-    if(!token) return  res.status(204).end()
+    if (!token) return res.status(204).end()
     try {
         jwt.verify(token, process.env.JWT_REFRESH_SECRET, (err, payload) => {
-            if(err) {
+            if (err) {
                 return next(new CustomError("Invalid Token", 403))
             }
 
@@ -347,7 +374,7 @@ export const logout = async (req, res, next) => {
 
     const isAuthenticated = req.isAuthenticated
 
-    if(!isAuthenticated) return next(new CustomError("No logged in user", 401))
+    if (!isAuthenticated) return next(new CustomError("No logged in user", 401))
 
     try {
         res.clearCookie('_session', {

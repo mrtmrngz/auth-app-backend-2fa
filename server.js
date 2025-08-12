@@ -9,6 +9,7 @@ import mainRoutes from './routes/index.js'
 import errorMiddleware from "./middlewares/errorMiddleware.js";
 import connectDB from "./libs/connectDb.js";
 import {verify_token} from "./middlewares/verify-token.js";
+import {safe_unban_user} from "./libs/schedule.js";
 
 connectDB()
 
@@ -51,6 +52,8 @@ app.use("/api", apiLimiter)
 app.use(verify_token)
 
 app.use("/api", mainRoutes)
+
+safe_unban_user()
 
 app.use(errorMiddleware)
 
