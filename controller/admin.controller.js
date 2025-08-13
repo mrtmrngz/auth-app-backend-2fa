@@ -1,6 +1,7 @@
 import CustomError from "../helpers/customError.js";
 import User from "../models/User.model.js";
 import {scheduleUnbanJob} from "../libs/schedule.js";
+import {cloudinary} from "../libs/cloudinary.js";
 
 
 export const admin_dashboard = async (req, res, next) => {
@@ -91,6 +92,7 @@ export const admin_dashboard = async (req, res, next) => {
 export const admin_user_edit = async (req, res, next) => {
 
     const id = req.params.id
+    const uploaded_file = req.file
 
     const {username, email, role} = req.body
 
@@ -116,6 +118,19 @@ export const admin_user_edit = async (req, res, next) => {
         if (username) user.username = username
         if (role && (role.toUpperCase() === "USER" || role.toUpperCase() === "ADMIN")) {
             user.role = role.toUpperCase()
+        }
+
+        if(uploaded_file) {
+            if(user.avatar && user.avatar.public_id) {
+                await cloudinary.uploader.destroy(user.avatar.public_id)
+            }
+
+            const result = await cloudinary.uploader.upload(`data:${uploaded_file.mimetype};base64,${uploaded_file.buffer.toString('base64')}`, {
+                folder: 'auth-app'
+            })
+
+            user.avatar.url = result.url
+            user.avatar.public_id = result.public_id
         }
 
         await user.save()
@@ -224,6 +239,10 @@ export const admin_user_delete = async (req, res, next) => {
         const user = await User.findByIdAndDelete(id)
 
         if (!user) return next(new CustomError("User not found!", 404))
+
+        if(user.avatar && user.avatar.public_id) {
+            await cloudinary.uploader.destroy(user.avatar.public_id)
+        }
 
         res.status(200).json({success: true, message: "User deleted successfully"})
 
