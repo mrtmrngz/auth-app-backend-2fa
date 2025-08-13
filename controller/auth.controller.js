@@ -167,7 +167,7 @@ export const resend_otp = async (req, res, next) => {
     const {token, otpType} = req.body;
 
     if (!token) {
-        return next(new CustomError("OTP and Token are required", 400));
+        return next(new CustomError("Token are required", 400));
     }
 
     if (!otpType) return next(new CustomError("OTP type is required", 400));
@@ -224,7 +224,9 @@ export const resend_otp = async (req, res, next) => {
         })
 
     } catch (err) {
-        console.error("Verify OTP Error:", err);
+        if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
+            return next(new CustomError("Invalid or corrupted token.", 401));
+        }
         return next(new CustomError("An error occurred during OTP verification.", 500));
     }
 };
