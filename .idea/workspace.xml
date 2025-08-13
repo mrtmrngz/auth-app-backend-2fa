@@ -6,12 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="4d9b91af-cdfc-4f74-9d94-66938319d6ed" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/controller/admin.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/controller/admin.controller.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/controller/auth.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/controller/auth.controller.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/User.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/models/User.model.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pnpm-lock.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/pnpm-lock.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/routes/admin.route.js" beforeDir="false" afterPath="$PROJECT_DIR$/routes/admin.route.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/server.js" beforeDir="false" afterPath="$PROJECT_DIR$/server.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -47,7 +45,7 @@
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/acer/Desktop/YAZILIM/NODEJS-EXPRESS/auth-app-nodejs-mongodb/routes&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/acer/Desktop/YAZILIM/NODEJS-EXPRESS/auth-app-nodejs-mongodb/__test__/auth&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -59,7 +57,11 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\acer\Desktop\YAZILIM\NODEJS-EXPRESS\auth-app-nodejs-mongodb\__test__\auth" />
       <recent name="C:\Users\acer\Desktop\YAZILIM\NODEJS-EXPRESS\auth-app-nodejs-mongodb\routes" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\acer\Desktop\YAZILIM\NODEJS-EXPRESS\auth-app-nodejs-mongodb\__test__\auth" />
     </key>
   </component>
   <component name="SharedIndexes">
@@ -89,7 +91,12 @@
       <workItem from="1754929402571" duration="2252000" />
       <workItem from="1754945328209" duration="3729000" />
       <workItem from="1754954299616" duration="169000" />
-      <workItem from="1755009276736" duration="7283000" />
+      <workItem from="1755009276736" duration="8307000" />
+      <workItem from="1755034377885" duration="253000" />
+      <workItem from="1755034963453" duration="1846000" />
+      <workItem from="1755038711336" duration="1798000" />
+      <workItem from="1755076281136" duration="1782000" />
+      <workItem from="1755079442200" duration="3031000" />
     </task>
     <servers />
   </component>

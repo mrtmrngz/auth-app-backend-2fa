@@ -51,7 +51,7 @@ export const register_controller = async (req, res, next) => {
 
         await sendOTPMAIL({otp: verifyAccountOTP, email})
 
-        res.status(200).json({success: true, message: "Register successful please check your email!", token: otpToken});
+        res.status(201).json({success: true, message: "Register successful please check your email!", token: otpToken});
     } catch (error) {
         console.error("Register Error:", error);
         return next(new CustomError("An error occurred during registration.", 500));
@@ -310,6 +310,8 @@ export const login = async (req, res, next) => {
         const user = await User.findOne({email}).select('+password')
 
         if (!user) return next(new CustomError("Invalid credentials!", 401))
+
+        if(!user.isVerified) return next(new CustomError("User not verified", 401))
 
         if (user.ban_status.is_banned) {
             if (user.ban_status.ban_expire) {

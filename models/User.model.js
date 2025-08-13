@@ -9,7 +9,6 @@ const UserSchema = mongoose.Schema({
     },
     newUsername: {
         type: String,
-        unique: true,
         trim: true
     },
     email: {
@@ -20,7 +19,6 @@ const UserSchema = mongoose.Schema({
     },
     newEmail: {
         type: String,
-        unique: true,
         trim: true
     },
     password: {
