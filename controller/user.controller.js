@@ -1,16 +1,14 @@
 import CustomError from "../helpers/customError.js";
 import User from "../models/User.model.js";
 import {send_two_factor_mail} from "../helpers/two-factor-mail.js";
-import {generateMailToken} from "../libs/generateTokens.js";
 import generateOTP from "../helpers/generateOTP.js";
-import {sendOTPMAIL} from "../libs/sendMail.js";
 import {cloudinary} from "../libs/cloudinary.js";
 
 
 export const user_info = async (req, res, next) => {
 
     try {
-        const user = await User.findById(req.user.id).select("user email avatar role isVerified")
+        const user = await User.findById(req.user.id).select("username email avatar role isVerified")
 
         if(!user) return next(new CustomError("User not found", 404))
 
@@ -55,7 +53,6 @@ export const change_mail_or_username = async (req, res, next) => {
     }
 
     if(changeType !== "EMAIL_CHANGE" && changeType !== "USERNAME_CHANGE") return next(new CustomError("Invalid Change Type", 400))
-
     if(changeType === "EMAIL_CHANGE" && (!email || email.trim() === "")) return next(new CustomError("Email Required", 400))
     if(changeType === "USERNAME_CHANGE" && (!username || username.trim() === "")) return next(new CustomError("Username Required", 400))
 
@@ -64,7 +61,6 @@ export const change_mail_or_username = async (req, res, next) => {
         const user = await User.findById(tokenUserId)
 
         if(!user) return next(new CustomError("User not found", 404))
-        let token;
 
         if(changeType === "EMAIL_CHANGE") {
             const existingUserEmail = await User.findOne({email: email})
@@ -87,13 +83,9 @@ export const change_mail_or_username = async (req, res, next) => {
         user.otpExpire = new Date(Date.now() + (1000 * 60 * 5))
         await user.save()
 
-        const mailType = changeType === "EMAIL_CHANGE" ? "Email Change" : "Username Change"
+        const {token, message} = await send_two_factor_mail(user)
 
-        await sendOTPMAIL({otp, email: user.email, type: mailType})
-
-        token = generateMailToken(changeType, user._id)
-
-        return res.status(200).json({success: true, message: "The 6-digit code has been sent to your email address.", token})
+        return res.status(200).json({success: true, message: message, token})
 
 
     }catch (err) {

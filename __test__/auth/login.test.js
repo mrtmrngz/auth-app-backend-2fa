@@ -240,6 +240,5 @@ describe("Login test", () => {
         expect(decoded).toHaveProperty("id")
         expect(decoded).toHaveProperty("otpType", "TWO_FACTOR")
     })
-
 })
 
