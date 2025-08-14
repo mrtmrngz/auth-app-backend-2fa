@@ -114,7 +114,7 @@ A secure and scalable RESTful API for a **2-Factor Authentication (2FA)** applic
      ```
 
 ## 🖥️ Usage
-- **Register/Login**: Use `POST /api/auth/register` or `POST /api/auth/login` to authenticate and receive a JWT cookie.
+- **Register/Login**: Use `POST /api/auth/register` or `POST /api/auth/login` to authenticate and receive a JWT token.
 - **Email Verification**: Verify email with OTP sent via `POST /api/auth/verify-otp`; account deletes after 5 failed attempts.
 - **2FA**: Enable 2FA with `POST /api/users/enable-two-factor` and verify with OTP; account locks for 10 minutes after 5 failed attempts.
 - **Password Reset**: Request a reset token via `POST /api/auth/reset-password-mail` and update password with `POST /api/auth/reset-password-apply`.
@@ -183,7 +183,7 @@ Please use pnpm for dependency management and ensure tests pass (`pnpm test`) be
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## 📬 Contact
-For questions or feedback, reach out to [mrtmrngz](https://github.com/mrtmrngz) or email [mert00marangoz@gmail.com](mailto:mert00marangoz@gmail.com).
+For questions or feedback, reach out to [mrtmrngz](https://github.com/mrtmrngz) or email [mert00marangoz@gmail.com](mailto:mert00marangoz@gmail.com) or [mertmarangoz123@gmail.com](mailto:mertmarangoz123@gmail.com).
 
 ## 🌟 Acknowledgements
 - Inspired by modern authentication systems with 2FA and admin controls.
