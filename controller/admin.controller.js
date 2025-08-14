@@ -3,6 +3,17 @@ import User from "../models/User.model.js";
 import {scheduleUnbanJob} from "../libs/schedule.js";
 import {cloudinary} from "../libs/cloudinary.js";
 
+export const admin_has_access = async (req, res, next) => {
+
+    try {
+
+        return res.status(200).json({success: true, hasAccess: true})
+
+    } catch (error) {
+        console.error("Register Error:", error);
+        return next(new CustomError("An error occurred during registration.", 500));
+    }
+}
 
 export const admin_dashboard = async (req, res, next) => {
 
@@ -81,7 +92,8 @@ export const admin_dashboard = async (req, res, next) => {
             banned_users,
             total_user_count,
             verified_user_count,
-            unverified_user_count
+            unverified_user_count,
+            success: true
         })
     } catch (error) {
         console.error("Register Error:", error);
@@ -96,8 +108,12 @@ export const admin_user_edit = async (req, res, next) => {
 
     const {username, email, role} = req.body
 
-    if (!username && !email && !role) {
-        return next(new CustomError("At least 1 field is required", 400))
+    const validUsername = username && username.trim() !== '';
+    const validEmail = email && email.trim() !== '';
+    const validRole = role && role.trim() !== '';
+
+    if (!validUsername && !validEmail && !validRole && !uploaded_file) {
+        return next(new CustomError("At least 1 field is required", 400));
     }
 
     try {
@@ -106,18 +122,22 @@ export const admin_user_edit = async (req, res, next) => {
 
         if (!user) return next(new CustomError("User not found!", 404))
 
-        if (email || username) {
+        if (validUsername || validEmail) {
             const existing_user = await User.findOne({$or: [{'username': username}, {'email': email}]})
 
             if (existing_user && existing_user._id !== id) {
-                return next(new CustomError("A user with this username or email address already exists.", 400))
+                return next(new CustomError("A user with this username or email address already exists.", 409))
             }
         }
 
-        if (email) user.email = email
-        if (username) user.username = username
-        if (role && (role.toUpperCase() === "USER" || role.toUpperCase() === "ADMIN")) {
-            user.role = role.toUpperCase()
+        if (validEmail) user.email = email
+        if (validUsername) user.username = username
+        if (validRole) {
+            if((role.toUpperCase() === "USER" || role.toUpperCase() === "ADMIN")){
+                user.role = role.toUpperCase()
+            }else {
+                return next(new CustomError("Invalid role", 409))
+            }
         }
 
         if(uploaded_file) {
@@ -166,7 +186,7 @@ export const ban_user = async (req, res, next) => {
         const user = await User.findById(banned_user_id)
 
         if (!user) return next(new CustomError("User not found", 404))
-        if (user.isBanned) return next(new CustomError("User already banned", 409))
+        if (user.ban_status.is_banned) return next(new CustomError("User already banned", 409))
 
         if (expire !== "P") {
             const regex = /(\d+)(M|H|D|W|MO)/
@@ -206,6 +226,8 @@ export const ban_user = async (req, res, next) => {
 export const unban_ban_user = async (req, res, next) => {
 
     const {user_id: banned_user_id} = req.body
+
+    if(!banned_user_id) return next(new CustomError("User id required!", 409))
 
     try {
 
