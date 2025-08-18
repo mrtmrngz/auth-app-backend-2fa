@@ -168,10 +168,11 @@ describe("OTP token test", () => {
 
         const response = await request(app).post("/api/auth/verify-otp").send(data).set("Accept", "application/json")
 
-        expect(response.statusCode).toBe(403);
+        expect(response.statusCode).toBe(410);
         expect(response.headers['content-type']).toMatch(/json/);
         expect(response.body.success).toBe(false)
         expect(response.body.error).toEqual("Too many failed attempts. Your account has been deleted. Please register again.")
+        expect(response.body.code).toEqual("ACCOUNT_DELETED")
     })
 
     test("Verify token attempt with incomplete information must fail.", async () => {
@@ -227,10 +228,11 @@ describe("OTP token test", () => {
 
         const response = await request(app).post("/api/auth/verify-otp").send(data).set("Accept", "application/json")
 
-        expect(response.statusCode).toBe(429);
+        expect(response.statusCode).toBe(423);
         expect(response.headers['content-type']).toMatch(/json/);
         expect(response.body.success).toBe(false)
         expect(response.body.error).toEqual("Too many failed attempts. Your account has been locked. Please try again later")
+        expect(response.body.code).toEqual("ACCOUNT_LOCKED")
     })
 
     test("If the user wants to open 2FA and the email is verified, a successful result should be returned.", async () => {
@@ -292,6 +294,7 @@ describe("OTP token test", () => {
         expect(response.headers['content-type']).toMatch(/json/);
         expect(response.body.success).toBe(true)
         expect(response.body.message).toEqual("Login Successful")
+        expect(response.body.code).toEqual("LOGIN_SUCCESS")
         expect(response.body.accessToken).toBeDefined()
 
         const refresh_token_session_cookie = response.headers["set-cookie"].find(cookie => cookie.startsWith("_session="))
@@ -331,10 +334,11 @@ describe("OTP token test", () => {
 
         const response = await request(app).post("/api/auth/verify-otp").send(data).set("Accept", "application/json")
 
-        expect(response.statusCode).toBe(429);
+        expect(response.statusCode).toBe(423);
         expect(response.headers['content-type']).toMatch(/json/);
         expect(response.body.success).toBe(false)
         expect(response.body.error).toEqual("Too many failed attempts. Your email change request has been locked. Please try again in 10 minutes.")
+        expect(response.body.code).toEqual("ACCOUNT_LOCKED")
     })
 
     test("Email should be successfully changed when the correct OTP is entered", async () => {
@@ -396,10 +400,11 @@ describe("OTP token test", () => {
 
         const response = await request(app).post("/api/auth/verify-otp").send(data).set("Accept", "application/json")
 
-        expect(response.statusCode).toBe(429);
+        expect(response.statusCode).toBe(423);
         expect(response.headers['content-type']).toMatch(/json/);
         expect(response.body.success).toBe(false)
         expect(response.body.error).toEqual("Too many failed attempts. Your username change request has been locked. Please try again in 10 minutes.")
+        expect(response.body.code).toEqual("ACCOUNT_LOCKED")
     })
 
     test("Username should be successfully changed when the correct OTP is entered", async () => {
@@ -557,7 +562,7 @@ describe("OTP token test", () => {
 
         const response = await request(app).post("/api/auth/resend-otp").send(data).set("Accept", "application/json")
 
-        expect(response.statusCode).toBe(403)
+        expect(response.statusCode).toBe(423)
         expect(response.headers['content-type']).toMatch(/json/);
         expect(response.body.success).toBe(false)
         expect(response.body.error).toMatch(/Your account is locked please try/)

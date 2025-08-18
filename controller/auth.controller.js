@@ -76,7 +76,7 @@ export const verify_otp = async (req, res, next) => {
 
         if (user.otpType !== bodyOtpType) return next(new CustomError("Unauthorized OTP type", 403));
 
-        if (user.otpExpire < new Date()) return next(new CustomError("OTP expired. Please resend code again.", 400));
+        if (user.otpExpire < new Date()) return next(new CustomError("OTP expired. Please resend code again.", 400, "OTP_EXPIRED"));
 
         if (otp.trim() === user.otp) {
 
@@ -88,13 +88,13 @@ export const verify_otp = async (req, res, next) => {
             if (bodyOtpType === "VERIFY_ACCOUNT") {
                 user.isVerified = true;
                 await user.save()
-                return res.status(200).json({success: true, message: "Email verified, please login!"});
+                return res.status(200).json({success: true, message: "Email verified, please login!", code: "EMAIL_VERIFIED"});
             } else if (bodyOtpType === "TWO_FACTOR") {
 
                 if (!user.isTwoFactorEnabled) {
                     user.isTwoFactorEnabled = true
                     await user.save()
-                    return res.status(200).json({success: true, message: "2FA activated"})
+                    return res.status(200).json({success: true, message: "2FA activated", code: "TWO_FACTOR_ENABLED"})
                 }
 
                 const accessToken = generateAccessToken(user._id, user.role)
@@ -104,10 +104,10 @@ export const verify_otp = async (req, res, next) => {
 
                 res.cookie('_session', refreshToken, {
                     httpOnly: true,
-                    secure: process.NODE_ENV === "production",
-                    sameSite: process.NODE_ENV === "production" ? "None" : "lax",
+                    secure: process.env.NODE_ENV === "production",
+                    sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
                     maxAge: 1000 * 60 * 60 * 24 * 7
-                }).status(200).json({success: true, message: "Login Successful", accessToken})
+                }).status(200).json({success: true, message: "Login Successful", accessToken, code: "LOGIN_SUCCESS"})
             } else if (bodyOtpType === "EMAIL_CHANGE" || bodyOtpType === "USERNAME_CHANGE") {
 
                 if (bodyOtpType === "EMAIL_CHANGE") {
@@ -134,7 +134,7 @@ export const verify_otp = async (req, res, next) => {
             if (userOtpAttemps >= 4) {
                 if (bodyOtpType === "VERIFY_ACCOUNT") {
                     await user.deleteOne()
-                    return next(new CustomError("Too many failed attempts. Your account has been deleted. Please register again.", 403));
+                    return next(new CustomError("Too many failed attempts. Your account has been deleted. Please register again.", 410, "ACCOUNT_DELETED"));
                 } else if (bodyOtpType === "TWO_FACTOR" || bodyOtpType === "EMAIL_CHANGE" || bodyOtpType === "USERNAME_CHANGE") {
                     user.isUserLocked = true
                     user.userLockExpire = new Date(Date.now() + (1000 * 60 * 10))
@@ -144,7 +144,7 @@ export const verify_otp = async (req, res, next) => {
                         : bodyOtpType === "EMAIL_CHANGE"
                             ? "Too many failed attempts. Your email change request has been locked. Please try again in 10 minutes."
                             : "Too many failed attempts. Your username change request has been locked. Please try again in 10 minutes."
-                    return next(new CustomError(lockMessage, 429));
+                    return next(new CustomError(lockMessage, 423, "ACCOUNT_LOCKED"));
                 }
             } else {
                 user.otpAttemps = (userOtpAttemps || 0) + 1
@@ -155,7 +155,7 @@ export const verify_otp = async (req, res, next) => {
 
     } catch (err) {
         if (err.name === "TokenExpiredError") {
-            return next(new CustomError("OTP expired. Please register again.", 401));
+            return next(new CustomError("OTP expired. Please resend code again.", 401, "OTP_EXPIRED"));
         }
 
         console.error("Verify OTP Error:", err);
@@ -201,7 +201,7 @@ export const resend_otp = async (req, res, next) => {
                 });
                 return next(new CustomError(
                     `Your account is locked please try ${unlockTime}`,
-                    403
+                    423,
                 ))
             }
         }
@@ -220,7 +220,7 @@ export const resend_otp = async (req, res, next) => {
         return res.status(200).json({
             success: true,
             message: "The code has been sent to your email address",
-            token: newToken
+            token: newToken,
         })
 
     } catch (err) {
@@ -343,8 +343,8 @@ export const login = async (req, res, next) => {
 
             res.cookie('_session', refreshToken, {
                 httpOnly: true,
-                secure: process.NODE_ENV === "production",
-                sameSite: process.NODE_ENV === "production" ? "None" : "lax",
+                secure: process.env.NODE_ENV === "production",
+                sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
                 maxAge: 1000 * 60 * 60 * 24 * 7
             }).status(200).json({success: true, message: "Login Successful", accessToken})
         }
@@ -383,8 +383,8 @@ export const logout = async (req, res, next) => {
     try {
         res.clearCookie('_session', {
             httpOnly: true,
-            secure: process.NODE_ENV === "production",
-            sameSite: process.NODE_ENV === "production" ? "None" : "lax",
+            secure: process.env.NODE_ENV === "production",
+            sameSite: process.env.NODE_ENV === "production" ? "None" : "lax",
         }).status(200).json({success: true, message: "Logout Successful."})
     } catch (err) {
         return next(new CustomError("An error occurred during login.", 500));

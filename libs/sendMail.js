@@ -38,6 +38,6 @@ export const send_reset_password_mail = async ({email, token}) => {
         },
         to: email,
         subject: "Reset Password",
-        html: RESET_PASSWORD_MAIL.replace("{{ reset_password_link }}", `${process.env.CLIENT_URL}?token=${token}`)
+        html: RESET_PASSWORD_MAIL.replace("{{ reset_password_link }}", `${process.env.CLIENT_URL}/auth/new-password?token=${token}`)
     })
 }

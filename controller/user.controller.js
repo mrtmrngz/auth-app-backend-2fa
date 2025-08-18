@@ -8,7 +8,7 @@ import {cloudinary} from "../libs/cloudinary.js";
 export const user_info = async (req, res, next) => {
 
     try {
-        const user = await User.findById(req.user.id).select("username email avatar role isVerified")
+        const user = await User.findById(req.user.id).select("username email avatar role isVerified isTwoFactorEnabled")
 
         if(!user) return next(new CustomError("User not found", 404))
 

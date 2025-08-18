@@ -23,7 +23,21 @@ app.use(cookieParser())
 app.use(helmet())
 app.use(helmet.crossOriginResourcePolicy({policy: 'cross-origin'}))
 app.use(morgan('common'))
-app.use(cors())
+app.use(cors({
+    origin: process.env.CLIENT_URL,
+    credentials: true
+}))
+
+const tokenLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: process.env.NODE_ENV === "test" ? Infinity : 100,
+    message: {
+        status: 429,
+        message: "You have sent too many requests, please try again later."
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+})
 
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -36,7 +50,18 @@ const apiLimiter = rateLimit({
     legacyHeaders: false
 })
 
-const authLimiter = rateLimit({
+const other_auth_limits = rateLimit({
+    windowMs: 60 * 1000,
+    max: process.env.NODE_ENV === "test" ? Infinity : 25,
+    message: {
+        status: 429,
+        message: "You have sent too many requests, please try again later."
+    },
+    standardHeaders: true,
+    legacyHeaders: false
+})
+
+const register_login_limit = rateLimit({
     windowMs: 5 * 60 * 1000,
     max: process.env.NODE_ENV === "test" ? Infinity : 10,
     message: {
@@ -47,7 +72,17 @@ const authLimiter = rateLimit({
     legacyHeaders: false
 })
 
-app.use("/api/auth", authLimiter)
+app.use("/api/auth/get-token", tokenLimiter)
+app.use("/api/auth/login", register_login_limit)
+app.use("/api/auth/register", register_login_limit)
+app.use("/api/auth/logout", register_login_limit)
+
+app.use("/api/auth", (req, res, next) => {
+    const bypass = ["/get-token", "/login", "/register", "/logout"]
+    if(bypass.some(path => req.originalUrl.startsWith(path))) return next();
+    other_auth_limits(req, res, next)
+})
+
 app.use("/api", apiLimiter)
 
 app.use(verify_token)

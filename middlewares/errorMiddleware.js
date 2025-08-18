@@ -9,6 +9,7 @@ const errorMiddleware = async (err, req, res, next) => {
         success: false,
         error: message,
         stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+        ...(err.code && { code: err.code }),
         ...((statusCode === 401 || statusCode === 403) && { isAccess: false })
     })
 }
