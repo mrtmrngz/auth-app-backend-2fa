@@ -149,7 +149,7 @@ export const admin_user_edit = async (req, res, next) => {
                 folder: 'auth-app'
             })
 
-            user.avatar.url = result.url
+            user.avatar.url = result.secure_url
             user.avatar.public_id = result.public_id
         }
 

@@ -83,7 +83,7 @@ export const change_mail_or_username = async (req, res, next) => {
         user.otpExpire = new Date(Date.now() + (1000 * 60 * 5))
         await user.save()
 
-        const {token, message} = await send_two_factor_mail(user)
+        const {token, message} = await send_two_factor_mail(user, changeType, otp)
 
         return res.status(200).json({success: true, message: message, token})
 
@@ -115,7 +115,7 @@ export const change_other_infos = async (req, res, next) => {
                 folder: "auth-app"
             })
 
-            user.avatar.url = result.url
+            user.avatar.url = result.secure_url
             user.avatar.public_id = result.public_id
         }
 

@@ -109,22 +109,25 @@ export const verify_otp = async (req, res, next) => {
                     maxAge: 1000 * 60 * 60 * 24 * 7
                 }).status(200).json({success: true, message: "Login Successful", accessToken, code: "LOGIN_SUCCESS"})
             } else if (bodyOtpType === "EMAIL_CHANGE" || bodyOtpType === "USERNAME_CHANGE") {
+                let code;
 
                 if (bodyOtpType === "EMAIL_CHANGE") {
                     user.email = user.newEmail
                     user.newEmail = undefined
+                    code = "EMAIL_CHANGED";
                 }
 
                 if (bodyOtpType === "USERNAME_CHANGE") {
                     user.username = user.newUsername
                     user.newUsername = undefined
+                    code = "USERNAME_CHANGED";
                 }
 
                 await user.save()
 
                 const message = bodyOtpType === "EMAIL_CHANGE" ? "User Email Address changed successfully" : "User username changed successfully"
 
-                return res.status(200).json({success: true, message})
+                return res.status(200).json({success: true, message, code})
             }
 
         } else {
@@ -350,6 +353,7 @@ export const login = async (req, res, next) => {
         }
 
     } catch (err) {
+        console.log(err);
         return next(new CustomError("An error occurred during login.", 500));
     }
 };
