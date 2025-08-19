@@ -35,7 +35,7 @@ describe("Admin test", () => {
         jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         cloudinaryUploadSpy = jest.spyOn(cloudinary.v2.uploader, 'upload').mockResolvedValue({
-            url: "https://mocked-url/testavatar_mock.jpg",
+            secure_url: "https://mocked-url/testavatar_mock.jpg",
             public_id: "testavatar_public_id_mock",
         })
 

@@ -35,7 +35,7 @@ describe("User test", () => {
         jest.spyOn(console, 'warn').mockImplementation(() => {});
 
         cloudinaryUploadSpy = jest.spyOn(cloudinary.v2.uploader, 'upload').mockResolvedValue({
-            url: "https://mocked-url/testavatar_mock.jpg",
+            secure_url: "https://mocked-url/testavatar_mock.jpg",
             public_id: "testavatar_public_id_mock",
         });
 
@@ -344,7 +344,7 @@ describe("User test", () => {
 
         const mail_token = jwt.verify(response.body.token, process.env.JWT_MAIL_SECRET)
         expect(mail_token).toHaveProperty('id')
-        expect(mail_token).toHaveProperty('otpType', "TWO_FACTOR")
+        expect(mail_token).toHaveProperty('otpType', "USERNAME_CHANGE")
     })
 
     // CHANGE OTHER INFOS TEST
