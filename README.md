@@ -168,6 +168,7 @@ auth-app-nodejs-mongodb/
 | PATCH  | `/api/admin/unban-user`         | Unban a user (admin-only)            |
 | PATCH  | `/api/admin/update-user/:id`    | Update user details (admin-only)     |
 | DELETE | `/api/admin/delete-user/:id`    | Delete a user (admin-only)           |
+| GET    | `/api/admin/user-edit-info/:id` | Fetch User Edit Infos (admin-only)           |
 
 ## 🤝 Contributing
 Contributions are welcome! To contribute:
