@@ -1,9 +1,10 @@
 import express from "express";
 import {protected_routes} from "../middlewares/protected-routes.js";
 import {
-    admin_dashboard, admin_has_access,
+    admin_dashboard, admin_fetch_user_edit, admin_has_access,
     admin_user_delete,
     admin_user_edit,
+    admin_user_list,
     ban_user,
     unban_ban_user
 } from "../controller/admin.controller.js";
@@ -13,6 +14,8 @@ const router = express.Router()
 
 router.get("/has-access", protected_routes(["ADMIN"]), admin_has_access)
 router.get("/dashboard", protected_routes(["ADMIN"]), admin_dashboard)
+router.get("/user-list", protected_routes(["ADMIN"]), admin_user_list)
+router.get("/user-edit-info/:id", protected_routes(["ADMIN"]), admin_fetch_user_edit)
 router.patch("/ban-user", protected_routes(["ADMIN"]), ban_user)
 router.patch("/unban-user", protected_routes(["ADMIN"]), unban_ban_user)
 router.patch("/update-user/:id", protected_routes(["ADMIN"]), upload.single('avatar'), admin_user_edit)

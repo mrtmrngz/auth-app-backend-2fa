@@ -52,7 +52,7 @@ const apiLimiter = rateLimit({
 
 const other_auth_limits = rateLimit({
     windowMs: 60 * 1000,
-    max: process.env.NODE_ENV === "test" ? Infinity : 25,
+    max: process.env.NODE_ENV === "test" ? Infinity : 35,
     message: {
         status: 429,
         message: "You have sent too many requests, please try again later."

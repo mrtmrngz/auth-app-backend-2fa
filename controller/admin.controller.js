@@ -101,6 +101,44 @@ export const admin_dashboard = async (req, res, next) => {
     }
 }
 
+export const admin_user_list = async (req, res, next) => {
+
+    if(!req.isAuthenticated || req.user.role !== "ADMIN") return next(new CustomError("Unauthorized", 401))
+
+    try {
+
+        const users = await User.find().select("email avatar username isVerified ban_status.is_banned isTwoFactorEnabled")
+
+        return res.status(200).json({success: true, users})
+        
+    } catch (error) {
+        console.error("Register Error:", error);
+        return next(new CustomError("An error occurred during registration.", 500));
+    }
+}
+
+export const admin_fetch_user_edit = async (req, res, next) => {
+
+    if(!req.params.id || req.params.id.toString().trim() === "") {
+        return next(new CustomError("User id is required", 400))
+    }
+
+    const validId = req.params.id.trim()
+
+    try {
+
+        const user = await User.findById(validId).select("avatar email username role")
+
+        if(!user) return next(new CustomError("User not found", 404))
+
+        return res.status(200).json({success: true, user})
+        
+    } catch (error) {
+        console.error("Register Error:", error);
+        return next(new CustomError("An error occurred during registration.", 500));
+    }
+}
+
 export const admin_user_edit = async (req, res, next) => {
 
     const id = req.params.id
@@ -183,6 +221,8 @@ export const ban_user = async (req, res, next) => {
             return next(new CustomError("The ID of the user you want to ban, the reason for the ban, and the ban expiration date are required.", 409))
         }
 
+        if(banned_user_id === req.user.id) return next(new CustomError("You cant banned your self", 400))
+
         const user = await User.findById(banned_user_id)
 
         if (!user) return next(new CustomError("User not found", 404))
@@ -255,6 +295,8 @@ export const admin_user_delete = async (req, res, next) => {
     const id = req.params.id
 
     if (!id) return next(new CustomError("ID is required!", 400))
+
+    if(req.user.id === req.params.id) return next(new CustomError("You cant delete yourself!", 400))
 
     try {
 
