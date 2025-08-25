@@ -1,7 +1,11 @@
 
 
 const errorMiddleware = async (err, req, res, next) => {
-    console.error(err)
+    const logData = {
+        message: err.message,
+        statusCode: err.statusCode
+    }
+    console.error(logData)
     const statusCode = err.statusCode || 500
     const message = err.message || "Internal Server error"
 
